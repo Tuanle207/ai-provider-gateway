@@ -1,5 +1,3 @@
-import os
-
 from ai_provider_gateway.domain.text_to_text import ResolvedModel
 
 
@@ -46,14 +44,14 @@ ALIASES = {
 }
 
 
-def default_model_id() -> str:
-    return os.environ.get("TEXT_DEFAULT_MODEL", "perplexity/sonar-2")
+def known_model_ids() -> tuple[str, ...]:
+    return tuple(MODELS)
 
 
-def resolve_model(model_id: str | None) -> ResolvedModel | None:
-    selected = model_id or default_model_id()
-    return MODELS.get(ALIASES.get(selected, selected))
+def resolve_model(model_id: str | None, default_model: str, available_models: tuple[str, ...]) -> ResolvedModel | None:
+    selected = ALIASES.get(model_id or default_model, model_id or default_model)
+    return MODELS.get(selected) if selected in available_models else None
 
 
-def list_models() -> list[ResolvedModel]:
-    return list(MODELS.values())
+def list_models(available_models: tuple[str, ...]) -> list[ResolvedModel]:
+    return [MODELS[model_id] for model_id in available_models]

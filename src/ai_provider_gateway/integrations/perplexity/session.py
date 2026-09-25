@@ -1,17 +1,16 @@
 import argparse
 import json
-import os
 import time
 from pathlib import Path
 
 
-def session_path() -> Path:
-    root = Path(os.environ.get("AI_PROVIDER_GATEWAY_STATE_DIR", Path.home() / ".local" / "state" / "ai-provider-gateway"))
+def session_path(state_dir: Path | None = None) -> Path:
+    root = state_dir or Path.home() / ".local" / "state" / "ai-provider-gateway"
     return root / "perplexity-session.json"
 
 
-def load_session() -> dict[str, str] | None:
-    path = session_path()
+def load_session(state_dir: Path | None = None) -> dict[str, str] | None:
+    path = session_path(state_dir)
     if not path.is_file():
         return None
     try:
@@ -21,13 +20,13 @@ def load_session() -> dict[str, str] | None:
     return data if isinstance(data, dict) else None
 
 
-def save_session(cookies: dict[str, str]) -> None:
-    path = session_path()
+def save_session(cookies: dict[str, str], state_dir: Path | None = None) -> None:
+    path = session_path(state_dir)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(cookies), encoding="utf-8")
 
 
-def interactive_login(timeout: float = 600.0) -> dict[str, str]:
+def interactive_login(timeout: float = 600.0, state_dir: Path | None = None) -> dict[str, str]:
     try:
         from patchright.sync_api import sync_playwright
     except ImportError as error:
@@ -42,7 +41,7 @@ def interactive_login(timeout: float = 600.0) -> dict[str, str]:
             cookies = {cookie["name"]: cookie["value"] for cookie in context.cookies()}
             if any("session-token" in name for name in cookies):
                 browser.close()
-                save_session(cookies)
+                save_session(cookies, state_dir)
                 return cookies
             time.sleep(1)
         browser.close()
@@ -50,8 +49,12 @@ def interactive_login(timeout: float = 600.0) -> dict[str, str]:
 
 
 def main() -> None:
+    from ai_provider_gateway.config import settings
+    from ai_provider_gateway.integrations.registry import known_model_ids
+
     parser = argparse.ArgumentParser(description="Sign in to Perplexity and save session cookies.")
     parser.add_argument("--timeout", type=float, default=600.0)
     args = parser.parse_args()
-    interactive_login(args.timeout)
-    print(f"Session saved to {session_path()}")
+    configured = settings(known_model_ids())
+    interactive_login(args.timeout, configured.state_dir)
+    print(f"Session saved to {session_path(configured.state_dir)}")

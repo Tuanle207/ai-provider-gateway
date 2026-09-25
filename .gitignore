@@ -6,5 +6,11 @@ __pycache__/
 tests/__pycache__/
 .coverage
 *.db
+.env
+.env.*
+!.env.example
+deployment/*.env
+!deployment/production.env.example
+.state/
 session.json
 perplexity.log

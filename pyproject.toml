@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ai-provider-gateway"
-version = "0.1.0"
+dynamic = ["version"]
 description = "OpenAI-compatible gateway for independently maintained AI providers"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -24,6 +24,9 @@ perplexity-login = "ai_provider_gateway.integrations.perplexity.session:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.dynamic]
+version = {attr = "ai_provider_gateway.version.__version__"}
 
 [tool.uv.sources]
 perplexity-api = { path = "vendor/perplexity-ai", editable = true }

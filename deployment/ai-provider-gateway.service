@@ -1,0 +1,28 @@
+[Unit]
+Description=AI Provider Gateway API
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+
+User=__RUN_AS_USER__
+Group=__RUN_AS_USER__
+WorkingDirectory=__APP_DIR__
+
+Environment=HOME=/home/__RUN_AS_USER__
+Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=-__ENV_FILE__
+
+ExecStart=__UV_BIN__ run --no-sync uvicorn __APP_MODULE__ --host 127.0.0.1 --port __PORT__ --workers __WORKERS__
+
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+UMask=0077
+
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

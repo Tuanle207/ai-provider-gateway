@@ -1,5 +1,4 @@
 import json
-import os
 import time
 from pathlib import Path
 from typing import Any
@@ -8,8 +7,8 @@ import aiosqlite
 
 
 class ConversationStore:
-    def __init__(self, path: Path | None = None) -> None:
-        root = Path(os.environ.get("AI_PROVIDER_GATEWAY_STATE_DIR", Path.home() / ".local" / "state" / "ai-provider-gateway"))
+    def __init__(self, state_dir: Path | None = None, path: Path | None = None) -> None:
+        root = state_dir or Path.home() / ".local" / "state" / "ai-provider-gateway"
         self._path = path or root / "conversations.db"
         self._db: aiosqlite.Connection | None = None
 

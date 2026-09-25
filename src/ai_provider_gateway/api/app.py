@@ -1,4 +1,4 @@
-import asyncio
+import hmac
 import json
 import os
 import re
@@ -11,22 +11,37 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from ai_provider_gateway.application.chat_completions import ChatCompletions
+from ai_provider_gateway.config import Settings, settings
 from ai_provider_gateway.infrastructure.conversation_store import ConversationStore
 from ai_provider_gateway.integrations.perplexity.adapter import PerplexityTextToTextAdapter
-from ai_provider_gateway.integrations.registry import list_models, resolve_model
+from ai_provider_gateway.integrations.registry import known_model_ids, list_models, resolve_model
+from ai_provider_gateway.version import __version__
 
-_store = ConversationStore()
-_provider = PerplexityTextToTextAdapter()
-_service = ChatCompletions(_provider, _store)
+_settings: Settings | None = None
+_store: ConversationStore | None = None
+_service: ChatCompletions | None = None
+
+
+def _configured() -> tuple[Settings, ChatCompletions]:
+    if _settings is None or _service is None:
+        raise RuntimeError("Application has not started.")
+    return _settings, _service
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
+    global _settings, _store, _service
+    _settings = settings(known_model_ids())
+    _store = ConversationStore(_settings.state_dir)
+    _service = ChatCompletions(PerplexityTextToTextAdapter(_settings.state_dir, _settings.perplexity_cookies), _store)
     yield
     await _store.close()
+    _settings = None
+    _store = None
+    _service = None
 
 
-app = FastAPI(title="AI Provider Gateway", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="AI Provider Gateway", version=__version__, lifespan=lifespan)
 
 
 def _error(status: int, message: str, param: str | None = None, code: str | None = None) -> JSONResponse:
@@ -44,6 +59,18 @@ def _content(value: Any) -> str:
     if isinstance(value, list):
         return "".join(str(item.get("text", "")) for item in value if isinstance(item, dict))
     return ""
+
+
+def _authorized(request: Request) -> bool:
+    configured, _ = _configured()
+    scheme, _, token = request.headers.get("authorization", "").partition(" ")
+    return scheme.lower() == "bearer" and bool(token) and hmac.compare_digest(token, configured.api_key)
+
+
+def _authentication_error() -> JSONResponse:
+    response = _error(401, "Incorrect API key provided.", code="invalid_api_key")
+    response.headers["WWW-Authenticate"] = "Bearer"
+    return response
 
 
 def _completion(model: str, text: str) -> dict[str, Any]:
@@ -66,7 +93,8 @@ async def _sse(messages: list[dict], model_id: str, model, conversation_id: str 
         return f"data: {json.dumps(payload)}\n\n"
 
     yield event({"role": "assistant"})
-    async for result in _service.stream(messages, model, conversation_id):
+    _, service = _configured()
+    async for result in service.stream(messages, model, conversation_id):
         if result.text:
             yield event({"content": re.sub(r"\[\d+\]", "", result.text)})
     yield event({}, "stop")
@@ -74,12 +102,23 @@ async def _sse(messages: list[dict], model_id: str, model, conversation_id: str 
 
 
 @app.get("/v1/models")
-async def models() -> dict[str, Any]:
-    return {"object": "list", "data": [{"id": model.id, "object": "model", "created": 0, "owned_by": model.provider} for model in list_models()]}
+async def models(request: Request):
+    if not _authorized(request):
+        return _authentication_error()
+    configured, _ = _configured()
+    return {"object": "list", "data": [{"id": model.id, "object": "model", "created": 0, "owned_by": model.provider} for model in list_models(configured.available_models)]}
+
+
+@app.get("/health")
+async def health() -> dict[str, str]:
+    return {"status": "ok", "version": __version__}
 
 
 @app.post("/v1/chat/completions")
 async def chat_completions(request: Request):
+    if not _authorized(request):
+        return _authentication_error()
+    configured, service = _configured()
     try:
         body = await request.json()
     except Exception:
@@ -92,7 +131,7 @@ async def chat_completions(request: Request):
     if not all(isinstance(message, dict) and _content(message.get("content")) for message in messages):
         return _error(400, "Each message must contain text content", "messages")
     model_id = body.get("model")
-    model = resolve_model(model_id)
+    model = resolve_model(model_id, configured.default_model, configured.available_models)
     if model is None:
         return _error(404, f"The model `{model_id}` does not exist.", "model", "model_not_found")
     public_model_id = model.id
@@ -100,7 +139,7 @@ async def chat_completions(request: Request):
     if body.get("stream"):
         return StreamingResponse(_sse(messages, public_model_id, model, conversation_id), media_type="text/event-stream")
     try:
-        result = await _service.complete(messages, model, conversation_id)
+        result = await service.complete(messages, model, conversation_id)
     except Exception as error:
         return _error(502, str(error))
     return _completion(public_model_id, result.text)
@@ -109,4 +148,5 @@ async def chat_completions(request: Request):
 def main() -> None:
     import uvicorn
 
-    uvicorn.run(app, host=os.environ.get("OPENAI_HOST", "127.0.0.1"), port=int(os.environ.get("OPENAI_PORT", "8001")))
+    configured = settings(known_model_ids())
+    uvicorn.run(app, host=configured.host, port=configured.port)

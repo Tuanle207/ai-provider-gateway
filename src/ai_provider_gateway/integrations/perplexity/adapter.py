@@ -1,5 +1,5 @@
 import json
-import os
+from pathlib import Path
 from typing import AsyncIterator
 
 from ai_provider_gateway.domain.text_to_text import TextToTextRequest, TextToTextResult
@@ -11,16 +11,17 @@ from ai_provider_gateway.integrations.perplexity.session import load_session
 class PerplexityTextToTextAdapter:
     """Gateway boundary around the vendored upstream async client."""
 
-    def __init__(self) -> None:
+    def __init__(self, state_dir: Path, cookies_env: str | None) -> None:
         self._client = None
+        self._state_dir = state_dir
+        self._cookies_env = cookies_env
 
     async def _get_client(self):
         if self._client is None:
             from perplexity_async import Client
 
             apply_model_overrides()
-            cookies_env = os.environ.get("PERPLEXITY_COOKIES")
-            cookies = json.loads(cookies_env) if cookies_env else load_session()
+            cookies = json.loads(self._cookies_env) if self._cookies_env else load_session(self._state_dir)
             self._client = await Client(cookies=cookies)
         return self._client
 
