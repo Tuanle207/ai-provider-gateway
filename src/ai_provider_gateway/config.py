@@ -33,7 +33,7 @@ def settings(known_models: tuple[str, ...]) -> Settings:
     return Settings(
         api_key=api_key,
         host=os.environ.get("OPENAI_HOST", "127.0.0.1"),
-        port=int(os.environ.get("OPENAI_PORT", "8001")),
+        port=int(os.environ.get("OPENAI_PORT", "8002")),
         state_dir=Path(os.environ.get("AI_PROVIDER_GATEWAY_STATE_DIR", Path.home() / ".local" / "state" / "ai-provider-gateway")),
         text_default_model=text_default_model,
         text_available_models=text_available_models,
