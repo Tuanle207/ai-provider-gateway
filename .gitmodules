@@ -1,0 +1,3 @@
+[submodule "vendor/perplexity-ai"]
+	path = vendor/perplexity-ai
+	url = https://github.com/helallao/perplexity-ai
