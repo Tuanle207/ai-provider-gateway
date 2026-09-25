@@ -48,7 +48,7 @@ if [[ ! -f "$ENV_FILE" ]]; then
     exit 1
 fi
 
-if grep -qE '^AI_PROVIDER_GATEWAY_API_KEY=(|replace-with-)' "$ENV_FILE"; then
+if grep -qE '^AI_PROVIDER_GATEWAY_API_KEY=($|replace-with-)' "$ENV_FILE"; then
     echo "Set a non-placeholder AI_PROVIDER_GATEWAY_API_KEY in $ENV_FILE, then rerun this script." >&2
     exit 1
 fi
