@@ -106,7 +106,7 @@ async def models(request: Request):
     if not _authorized(request):
         return _authentication_error()
     configured, _ = _configured()
-    return {"object": "list", "data": [{"id": model.id, "object": "model", "created": 0, "owned_by": model.provider} for model in list_models(configured.available_models)]}
+    return {"object": "list", "data": [{"id": model.id, "object": "model", "created": 0, "owned_by": model.provider} for model in list_models(configured.text_available_models)]}
 
 
 @app.get("/health")
@@ -131,7 +131,7 @@ async def chat_completions(request: Request):
     if not all(isinstance(message, dict) and _content(message.get("content")) for message in messages):
         return _error(400, "Each message must contain text content", "messages")
     model_id = body.get("model")
-    model = resolve_model(model_id, configured.default_model, configured.available_models)
+    model = resolve_model(model_id, configured.text_default_model, configured.text_available_models)
     if model is None:
         return _error(404, f"The model `{model_id}` does not exist.", "model", "model_not_found")
     public_model_id = model.id

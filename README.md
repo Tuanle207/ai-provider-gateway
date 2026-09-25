@@ -46,12 +46,14 @@ On an Ubuntu/Debian VM, clone this repository including its submodule and run:
 ```bash
 git clone --recurse-submodules <repository-url> ai-provider-gateway
 cd ai-provider-gateway
-sudo deployment/deploy.sh
+sudo ./deployment/deploy.sh
 ```
 
-The first run creates `/etc/ai-provider-gateway.env` and stops so no insecure
+Run the script from the cloned repository as shown above. It also works from any
+directory because it resolves the repository root from the script path. The first
+run creates the ignored `deployment/production.env` file and stops so no insecure
 service can start. Set a strong `AI_PROVIDER_GATEWAY_API_KEY` in that file, then
-rerun `sudo deployment/deploy.sh`. Later invocations update submodules,
+rerun `sudo ./deployment/deploy.sh`. Later invocations update submodules,
 dependencies, the systemd unit, and restart the service while preserving the
 environment file and `/var/lib/ai-provider-gateway` state.
 
