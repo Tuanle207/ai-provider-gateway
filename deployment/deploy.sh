@@ -88,7 +88,7 @@ systemctl restart "$SERVICE_NAME"
 systemctl is-active --quiet "$SERVICE_NAME"
 
 for _ in {1..15}; do
-    if health="$(curl --fail --silent --show-error "http://127.0.0.1:${PORT}/health")"; then
+    if health="$(curl --fail --silent "http://127.0.0.1:${PORT}/health" 2>/dev/null)"; then
         echo "Deployment complete: $health"
         exit 0
     fi
