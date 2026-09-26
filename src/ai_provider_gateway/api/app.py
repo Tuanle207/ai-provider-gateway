@@ -135,7 +135,7 @@ async def chat_completions(request: Request):
     if model is None:
         return _error(404, f"The model `{model_id}` does not exist.", "model", "model_not_found")
     public_model_id = model.id
-    conversation_id = request.headers.get("x-perplexity-conversation-id")
+    conversation_id = request.headers.get("x-conversation-id")
     if body.get("stream"):
         return StreamingResponse(_sse(messages, public_model_id, model, conversation_id), media_type="text/event-stream")
     try:

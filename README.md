@@ -36,7 +36,7 @@ uv run scripts/test_chat_completion.py
 Set `AI_PROVIDER_GATEWAY_URL`, `AI_PROVIDER_GATEWAY_MODEL`, or
 `AI_PROVIDER_GATEWAY_PROMPT` to override its target, model, or prompt.
 
-Use `x-perplexity-conversation-id` to retain Perplexity follow-up state between
+Use `x-conversation-id` to retain Perplexity follow-up state between
 requests. The gateway persists opaque provider state in SQLite.
 
 ## Production Deployment
