@@ -58,7 +58,7 @@ STATE_DIR="${STATE_DIR:-/var/lib/ai-provider-gateway}"
 
 git -C "$APP_DIR" submodule update --init --recursive
 
-UV_BIN="$(command -v uv || true)"
+UV_BIN="$(sudo -u "$RUN_AS_USER" -H sh -c 'command -v uv' || true)"
 if [[ -z "$UV_BIN" ]]; then
     sudo -u "$RUN_AS_USER" -H sh -c 'curl -LsSf https://astral.sh/uv/install.sh | sh'
     UV_BIN="$(sudo -u "$RUN_AS_USER" -H sh -c 'command -v uv || printf "%s/.local/bin/uv" "$HOME"')"

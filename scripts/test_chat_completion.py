@@ -6,10 +6,10 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 
-base_url = os.environ.get("AI_PROVIDER_GATEWAY_URL", "http://127.0.0.1:8001")
+# base_url = os.environ.get("AI_PROVIDER_GATEWAY_URL", "http://127.0.0.1:8002")
+base_url = os.environ.get("AI_PROVIDER_GATEWAY_URL", "https://vcreator.wordphere.com/api/ai")
 model = os.environ.get("AI_PROVIDER_GATEWAY_MODEL", "perplexity/claude-sonnet-5")
 prompt = os.environ.get("AI_PROVIDER_GATEWAY_PROMPT", "What is the capital of France?")
-api_key = os.environ.get("AI_PROVIDER_GATEWAY_API_KEY")
 
 if not api_key:
     raise SystemExit("AI_PROVIDER_GATEWAY_API_KEY must be set.")

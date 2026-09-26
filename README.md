@@ -15,16 +15,16 @@ uv run perplexity-login
 uv run ai-provider-gateway
 ```
 
-The service listens on `127.0.0.1:8001` by default. All `/v1/*` requests require
+The service listens on `127.0.0.1:8002` by default. All `/v1/*` requests require
 `Authorization: Bearer <AI_PROVIDER_GATEWAY_API_KEY>`. Set `OPENAI_HOST` and
 `OPENAI_PORT` to override the listener. `TEXT_DEFAULT_MODEL` selects the default
 model and must be included in `TEXT_AVAILABLE_MODELS`. The latter is a
 comma-separated public-model allowlist; omit it to allow every built-in model.
 
 ```powershell
-curl http://127.0.0.1:8001/health
-curl http://127.0.0.1:8001/v1/models -Headers @{ Authorization = "Bearer $env:AI_PROVIDER_GATEWAY_API_KEY" }
-curl http://127.0.0.1:8001/v1/chat/completions -Method POST -ContentType application/json -Headers @{ Authorization = "Bearer $env:AI_PROVIDER_GATEWAY_API_KEY" } -Body '{"model":"perplexity/sonar-2","messages":[{"role":"user","content":"Hello"}]}'
+curl http://127.0.0.1:8002/health
+curl http://127.0.0.1:8002/v1/models -Headers @{ Authorization = "Bearer $env:AI_PROVIDER_GATEWAY_API_KEY" }
+curl http://127.0.0.1:8002/v1/chat/completions -Method POST -ContentType application/json -Headers @{ Authorization = "Bearer $env:AI_PROVIDER_GATEWAY_API_KEY" } -Body '{"model":"perplexity/sonar-2","messages":[{"role":"user","content":"Hello"}]}'
 ```
 
 Call the local chat API with the included smoke script:
@@ -61,7 +61,7 @@ Use `RUN_AS_USER`, `APP_DIR`, `ENV_FILE`, `PORT`, or `WORKERS` to override the
 deployment defaults. Verify the running release with:
 
 ```bash
-curl http://127.0.0.1:8001/health
+curl http://127.0.0.1:8002/health
 systemctl status ai-provider-gateway
 ```
 
