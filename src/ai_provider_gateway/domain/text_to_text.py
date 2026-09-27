@@ -6,8 +6,9 @@ from typing import Any, AsyncIterator, Protocol
 class ResolvedModel:
     id: str
     provider: str
-    mode: str
+    capability: str
     provider_model: str | None
+    mode: str | None = None
 
 
 @dataclass(frozen=True)

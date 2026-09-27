@@ -1,7 +1,7 @@
 from ai_provider_gateway.domain.text_to_text import ResolvedModel
 
 
-_MODELS = (
+_CHAT_MODELS = (
     ("perplexity/auto", "auto", None),
     ("perplexity/sonar-2", "pro", "sonar"),
     ("perplexity/gpt-4.5", "pro", "gpt-4.5"),
@@ -32,7 +32,26 @@ _MODELS = (
     ("perplexity/deep-research", "deep research", None),
 )
 
-MODELS = {id_: ResolvedModel(id_, "perplexity", mode, provider_model) for id_, mode, provider_model in _MODELS}
+_IMAGE_MODELS = (
+    ("web-google-flow/nano-banana-2", "nano-banana-2"),
+    ("web-google-flow/nano-banana-pro", "nano-banana-pro"),
+    ("web-google-flow/nano-banana-2-lite", "nano-banana-2-lite"),
+)
+
+_WEB_PERPLEXITY_MODELS = (
+    ("web-perplexity/sonar-2", "sonar-2"),
+)
+
+MODELS = {
+    id_: ResolvedModel(id_, "perplexity", "chat", provider_model, mode)
+    for id_, mode, provider_model in _CHAT_MODELS
+} | {
+    id_: ResolvedModel(id_, "web-google-flow", "image", provider_model)
+    for id_, provider_model in _IMAGE_MODELS
+} | {
+    id_: ResolvedModel(id_, "web-perplexity", "chat", provider_model)
+    for id_, provider_model in _WEB_PERPLEXITY_MODELS
+}
 ALIASES = {
     "sonar-2": "perplexity/sonar-2",
     "gpt-5.6-terra": "perplexity/gpt-5.6-terra",
@@ -48,9 +67,18 @@ def known_model_ids() -> tuple[str, ...]:
     return tuple(MODELS)
 
 
-def resolve_model(model_id: str | None, default_model: str, available_models: tuple[str, ...]) -> ResolvedModel | None:
+def resolve_model(model_id: str | None, default_model: str, available_models: tuple[str, ...], capability: str = "chat") -> ResolvedModel | None:
     selected = ALIASES.get(model_id or default_model, model_id or default_model)
-    return MODELS.get(selected) if selected in available_models else None
+    model = MODELS.get(selected) if selected in available_models else None
+    return model if model and model.capability == capability else None
+
+
+def resolve_chat_model(model_id: str | None, default_model: str, available_models: tuple[str, ...]) -> ResolvedModel | None:
+    return resolve_model(model_id, default_model, available_models, "chat")
+
+
+def resolve_image_model(model_id: str | None, default_model: str, available_models: tuple[str, ...]) -> ResolvedModel | None:
+    return resolve_model(model_id, default_model, available_models, "image")
 
 
 def list_models(available_models: tuple[str, ...]) -> list[ResolvedModel]:

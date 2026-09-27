@@ -28,7 +28,7 @@ class PerplexityTextToTextAdapter:
     @staticmethod
     def _query(messages: list[dict]) -> str:
         parts = [
-            str(message.get("content", ""))
+            message["content"] if isinstance(message.get("content"), str) else "".join(item["text"] for item in message["content"])
             for message in messages
             if message.get("role") in {"system", "user"} and message.get("content")
         ]

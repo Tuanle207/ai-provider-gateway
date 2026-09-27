@@ -17,8 +17,8 @@ uv run ai-provider-gateway
 
 The service listens on `127.0.0.1:8002` by default. All `/v1/*` requests require
 `Authorization: Bearer <AI_PROVIDER_GATEWAY_API_KEY>`. Set `OPENAI_HOST` and
-`OPENAI_PORT` to override the listener. `TEXT_DEFAULT_MODEL` selects the default
-model and must be included in `TEXT_AVAILABLE_MODELS`. The latter is a
+`OPENAI_PORT` to override the listener. `CHAT_DEFAULT_MODEL` selects the default
+model and must be included in `CHAT_AVAILABLE_MODELS`. The latter is a
 comma-separated public-model allowlist; omit it to allow every built-in model.
 
 ```powershell
@@ -38,6 +38,20 @@ Set `AI_PROVIDER_GATEWAY_URL`, `AI_PROVIDER_GATEWAY_MODEL`, or
 
 Use `x-conversation-id` to retain Perplexity follow-up state between
 requests. The gateway persists opaque provider state in SQLite.
+
+## Image Generation
+
+`POST /v1/images/generations` accepts `model`, `prompt`, `n` (1-4), `size`, and
+`response_format` (`url` or `b64_json`). Supported sizes are `1024x1024`,
+`768x1024`, `1024x768`, `768x1376`, and `1376x768`. Enable image models with
+`IMAGE_AVAILABLE_MODELS`, and set `IMAGE_DEFAULT_MODEL` when clients omit a
+model. URL responses require `AI_PROVIDER_GATEWAY_PUBLIC_BASE_URL`; artifact
+URLs are gateway-authenticated and never expose provider paths.
+
+The Google Flow execution runtime is supplied by the separate
+`vendor/ai-web-provider` submodule described in `docs/ai-web-provider-integration-design.md`.
+This checkout does not yet include that submodule, so enabling an image model
+returns `service_unavailable` until it is vendored and its adapter is wired.
 
 ## Production Deployment
 

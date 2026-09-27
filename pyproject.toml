@@ -7,9 +7,10 @@ name = "ai-provider-gateway"
 dynamic = ["version"]
 description = "OpenAI-compatible gateway for independently maintained AI providers"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = [
     "aiosqlite>=0.19.0",
+    "ai-web-provider",
     "fastapi>=0.100.0",
     "perplexity-api",
     "uvicorn>=0.20.0",
@@ -29,4 +30,5 @@ where = ["src"]
 version = {attr = "ai_provider_gateway.version.__version__"}
 
 [tool.uv.sources]
+ai-web-provider = { path = "vendor/ai-web-provider", editable = true }
 perplexity-api = { path = "vendor/perplexity-ai", editable = true }

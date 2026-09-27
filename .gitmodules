@@ -1,3 +1,6 @@
 [submodule "vendor/perplexity-ai"]
 	path = vendor/perplexity-ai
 	url = https://github.com/helallao/perplexity-ai
+[submodule "vendor/ai-web-provider"]
+	path = vendor/ai-web-provider
+	url = https://github.com/Tuanle207/ai-proxy.git
