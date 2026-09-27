@@ -33,9 +33,9 @@ _CHAT_MODELS = (
 )
 
 _IMAGE_MODELS = (
-    ("web-google-flow/nano-banana-2", "nano-banana-2"),
-    ("web-google-flow/nano-banana-pro", "nano-banana-pro"),
-    ("web-google-flow/nano-banana-2-lite", "nano-banana-2-lite"),
+    ("web-google-flow/nano-banana-2", "Nano Banana 2"),
+    ("web-google-flow/nano-banana-pro", "Nano Banana Pro"),
+    ("web-google-flow/nano-banana-2-lite", "Nano Banana 2 Lite"),
 )
 
 _WEB_PERPLEXITY_MODELS = (
