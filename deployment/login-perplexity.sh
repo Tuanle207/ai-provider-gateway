@@ -24,4 +24,5 @@ if [[ ! -x "$UV_BIN" ]]; then
 fi
 
 cd "$APP_DIR"
+export DISPLAY=:10
 "$UV_BIN" run perplexity-login "$@"

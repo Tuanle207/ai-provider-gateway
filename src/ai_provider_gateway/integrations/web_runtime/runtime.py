@@ -1,12 +1,12 @@
 from pathlib import Path
 
 from ai_web_provider import ProviderExecutor, ProviderRuntimeContainer, Settings
-from ai_proxy.core.models import Account, AccountStatus
-from ai_proxy.core.provider.session import ProviderSession
+from ai_web_provider.core.models import Account, AccountStatus
+from ai_web_provider.core.provider.session import ProviderSession
 
 
 class WebProviderRuntime:
-    def __init__(self, state_dir: Path, *, headless: bool, max_concurrent_browsers: int, per_account_concurrency: int, default_timeout_seconds: float, max_retries: int, cooldown_minutes: int, provider_settings: dict[str, dict]) -> None:
+    def __init__(self, state_dir: Path, *, headless: bool, max_concurrent_browsers: int, per_account_concurrency: int, default_timeout_seconds: float, max_retries: int, cooldown_minutes: float, provider_settings: dict[str, dict]) -> None:
         settings = Settings(
             data_dir=str(state_dir / "web-automation"),
             headless=headless,

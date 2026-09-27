@@ -20,7 +20,7 @@ class Settings:
     web_automation_per_account_concurrency: int
     web_automation_default_timeout_seconds: float
     web_automation_max_retries: int
-    web_automation_cooldown_minutes: int
+    web_automation_cooldown_minutes: float
     web_provider_settings: dict[str, dict[str, str]]
     chat_default_model: str
     chat_available_models: tuple[str, ...]
@@ -85,7 +85,7 @@ def settings(known_models: tuple[str, ...]) -> Settings:
         web_automation_per_account_concurrency=int(os.environ.get("WEB_AUTOMATION_PER_ACCOUNT_CONCURRENCY", "1")),
         web_automation_default_timeout_seconds=float(os.environ.get("WEB_AUTOMATION_DEFAULT_TIMEOUT_SECONDS", "180")),
         web_automation_max_retries=int(os.environ.get("WEB_AUTOMATION_MAX_RETRIES", "3")),
-        web_automation_cooldown_minutes=int(os.environ.get("WEB_AUTOMATION_COOLDOWN_MINUTES", "5")),
+        web_automation_cooldown_minutes=float(os.environ.get("WEB_AUTOMATION_COOLDOWN_MINUTES", "5")),
         web_provider_settings=web_provider_settings,
         chat_default_model=chat_default_model,
         chat_available_models=chat_available_models,
