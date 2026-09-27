@@ -12,6 +12,7 @@ PORT="${PORT:-8002}"
 WORKERS="${WORKERS:-1}"
 APP_MODULE="${APP_MODULE:-ai_provider_gateway.api.app:app}"
 UNIT_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
+LOGROTATE_FILE="/etc/logrotate.d/${SERVICE_NAME}"
 
 if [[ "$(uname -s)" != "Linux" ]] || ! command -v systemctl >/dev/null; then
     echo "This deployment script requires a Linux system with systemd." >&2
@@ -24,7 +25,7 @@ if [[ ! -f "$APP_DIR/pyproject.toml" ]] || [[ ! -f "$APP_DIR/deployment/${SERVIC
 fi
 
 if [[ $EUID -ne 0 ]]; then
-    exec sudo --preserve-env=APP_DIR,RUN_AS_USER,ENV_FILE,PORT,WORKERS,APP_MODULE "$0"
+    exec sudo --preserve-env=APP_DIR,RUN_AS_USER,ENV_FILE,PORT,WORKERS,APP_MODULE,LOG_FILE "$0"
 fi
 
 if ! id "$RUN_AS_USER" >/dev/null 2>&1; then
@@ -55,6 +56,7 @@ fi
 
 STATE_DIR="$(awk -F= '$1 == "AI_PROVIDER_GATEWAY_STATE_DIR" { print substr($0, index($0, "=") + 1); exit }' "$ENV_FILE")"
 STATE_DIR="${STATE_DIR:-/var/lib/ai-provider-gateway}"
+LOG_FILE="${LOG_FILE:-$STATE_DIR/ai-provider-gateway.log}"
 
 git -C "$APP_DIR" submodule update --init --recursive
 
@@ -70,6 +72,10 @@ if [[ ! -x "$UV_BIN" ]]; then
 fi
 
 install -d -m 0750 -o "$RUN_AS_USER" -g "$RUN_AS_GROUP" "$STATE_DIR"
+install -d -m 0750 -o "$RUN_AS_USER" -g "$RUN_AS_GROUP" "$(dirname -- "$LOG_FILE")"
+touch "$LOG_FILE"
+chown "$RUN_AS_USER:$RUN_AS_GROUP" "$LOG_FILE"
+chmod 0640 "$LOG_FILE"
 sudo -u "$RUN_AS_USER" -H "$UV_BIN" sync --frozen --extra driver --directory "$APP_DIR"
 
 sed \
@@ -80,7 +86,25 @@ sed \
     -e "s|__APP_MODULE__|$APP_MODULE|g" \
     -e "s|__PORT__|$PORT|g" \
     -e "s|__WORKERS__|$WORKERS|g" \
+    -e "s|__LOG_FILE__|$LOG_FILE|g" \
     "$APP_DIR/deployment/${SERVICE_NAME}.service" > "$UNIT_FILE"
+
+cat > "$LOGROTATE_FILE" <<EOF
+$LOG_FILE {
+    daily
+    dateext
+    dateformat -%Y%m%d
+    rotate 30
+    maxage 30
+    missingok
+    notifempty
+    compress
+    delaycompress
+    copytruncate
+    su $RUN_AS_USER $RUN_AS_GROUP
+}
+EOF
+chmod 0644 "$LOGROTATE_FILE"
 
 systemctl daemon-reload
 systemctl enable --now "$SERVICE_NAME"

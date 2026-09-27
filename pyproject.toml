@@ -13,6 +13,7 @@ dependencies = [
     "ai-web-provider",
     "fastapi>=0.100.0",
     "perplexity-api",
+    "python-dotenv>=1.0.0",
     "uvicorn>=0.20.0",
 ]
 
@@ -22,6 +23,7 @@ driver = ["patchright>=1.0.0"]
 [project.scripts]
 ai-provider-gateway = "ai_provider_gateway.api.app:main"
 perplexity-login = "ai_provider_gateway.integrations.perplexity.session:main"
+ai-provider-accounts = "ai_provider_gateway.accounts:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

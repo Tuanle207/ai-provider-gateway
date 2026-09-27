@@ -1,6 +1,8 @@
 from pathlib import Path
 
 from ai_web_provider import ProviderExecutor, ProviderRuntimeContainer, Settings
+from ai_proxy.core.models import Account, AccountStatus
+from ai_proxy.core.provider.session import ProviderSession
 
 
 class WebProviderRuntime:
@@ -27,3 +29,23 @@ class WebProviderRuntime:
 
     async def shutdown(self) -> None:
         await self._container.shutdown()
+
+    def add_account(self, provider: str, email: str) -> Account:
+        return self._container.provider(provider).accounts.add(email)
+
+    def list_accounts(self, provider: str) -> list[Account]:
+        return self._container.provider(provider).accounts.list_accounts()
+
+    async def login(self, provider: str, email: str) -> None:
+        runtime = self._container.provider(provider)
+        account = runtime.accounts.get(email)
+        session = ProviderSession(
+            account=account,
+            page=None,
+            paths=self._container.paths,
+            output_dir=self._container.paths.outputs_dir,
+            settings=runtime.settings,
+        )
+        if not await runtime.auth.interactive_login(session):
+            raise RuntimeError("Login did not complete before the provider timeout.")
+        runtime.accounts.set_status(account.email, AccountStatus.ACTIVE)

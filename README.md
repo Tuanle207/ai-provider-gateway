@@ -1,61 +1,85 @@
-# AI Provider Gateway
+# Provider Gateway
 
-An OpenAI-compatible AI gateway. The first supported capability is text-to-text
-through an in-process Perplexity adapter backed by the pinned
-`vendor/perplexity-ai` Git submodule.
+Provider Gateway is the single HTTP service for browser-backed and client-backed
+AI providers. It exposes an OpenAI-compatible API for chat completions, image
+generation, model discovery, and authenticated artifact delivery. Provider
+accounts, browser sessions, and generated files are kept under
+`AI_PROVIDER_GATEWAY_STATE_DIR`; API clients never receive provider filesystem
+paths or browser URLs.
 
-## Local Run
+All `/v1/*` endpoints require:
+
+```text
+Authorization: Bearer <AI_PROVIDER_GATEWAY_API_KEY>
+```
+
+## Local Setup
+
+Initialize the vendor dependencies, create local configuration, and install the
+gateway with browser support:
 
 ```powershell
+git submodule update --init --recursive
 Copy-Item .env.example .env
-# Set AI_PROVIDER_GATEWAY_API_KEY in .env, then load the file into your shell.
-Get-Content .env | Where-Object { $_ -and -not $_.StartsWith('#') } | ForEach-Object { $name, $value = $_ -split '=', 2; Set-Item -Path "Env:$name" -Value $value }
+# Set AI_PROVIDER_GATEWAY_API_KEY and enabled model allowlists in .env.
 uv sync --extra driver
-uv run perplexity-login
+```
+
+The gateway loads `.env` automatically for local development. Start it with:
+
+```powershell
 uv run ai-provider-gateway
 ```
 
-The service listens on `127.0.0.1:8002` by default. All `/v1/*` requests require
-`Authorization: Bearer <AI_PROVIDER_GATEWAY_API_KEY>`. Set `OPENAI_HOST` and
-`OPENAI_PORT` to override the listener. `CHAT_DEFAULT_MODEL` selects the default
-model and must be included in `CHAT_AVAILABLE_MODELS`. The latter is a
-comma-separated public-model allowlist; omit it to allow every built-in model.
+It listens on `http://127.0.0.1:8002` by default. Confirm the service and its
+enabled models:
 
 ```powershell
-curl http://127.0.0.1:8002/health
-curl http://127.0.0.1:8002/v1/models -Headers @{ Authorization = "Bearer $env:AI_PROVIDER_GATEWAY_API_KEY" }
-curl http://127.0.0.1:8002/v1/chat/completions -Method POST -ContentType application/json -Headers @{ Authorization = "Bearer $env:AI_PROVIDER_GATEWAY_API_KEY" } -Body '{"model":"perplexity/sonar-2","messages":[{"role":"user","content":"Hello"}]}'
+$headers = @{ Authorization = "Bearer $env:AI_PROVIDER_GATEWAY_API_KEY" }
+Invoke-RestMethod http://127.0.0.1:8002/health
+Invoke-RestMethod http://127.0.0.1:8002/v1/models -Headers $headers
 ```
 
-Call the local chat API with the included smoke script:
+### Provider Login
+
+Provider login is a maintenance operation and is intentionally not exposed over
+the HTTP API. Stop the gateway before logging in so only one process writes the
+browser account state. Login opens a headed browser; complete the provider login
+there and wait for the command to report that the session was saved.
+
+For browser-backed Google Flow:
 
 ```powershell
-uv run scripts/test_chat_completion.py
+uv run ai-provider-accounts add --provider google_flow --email you@gmail.com
+uv run ai-provider-accounts login --provider google_flow --email you@gmail.com
+uv run ai-provider-accounts list --provider google_flow
 ```
 
-Set `AI_PROVIDER_GATEWAY_URL`, `AI_PROVIDER_GATEWAY_MODEL`, or
-`AI_PROVIDER_GATEWAY_PROMPT` to override its target, model, or prompt.
+For browser-backed Perplexity:
 
-Use `x-conversation-id` to retain Perplexity follow-up state between
-requests. The gateway persists opaque provider state in SQLite.
+```powershell
+uv run ai-provider-accounts add --provider perplexity --email you@example.com
+uv run ai-provider-accounts login --provider perplexity --email you@example.com
+```
 
-## Image Generation
+Browser sessions are persisted below:
 
-`POST /v1/images/generations` accepts `model`, `prompt`, `n` (1-4), `size`, and
-`response_format` (`url` or `b64_json`). Supported sizes are `1024x1024`,
-`768x1024`, `1024x768`, `768x1376`, and `1376x768`. Enable image models with
-`IMAGE_AVAILABLE_MODELS`, and set `IMAGE_DEFAULT_MODEL` when clients omit a
-model. URL responses require `AI_PROVIDER_GATEWAY_PUBLIC_BASE_URL`; artifact
-URLs are gateway-authenticated and never expose provider paths.
+```text
+<AI_PROVIDER_GATEWAY_STATE_DIR>/web-automation/providers/<provider>/sessions/<email>/storage_state.json
+```
 
-The Google Flow execution runtime is supplied by the separate
-`vendor/ai-web-provider` submodule described in `docs/ai-web-provider-integration-design.md`.
-This checkout does not yet include that submodule, so enabling an image model
-returns `service_unavailable` until it is vendored and its adapter is wired.
+The existing `perplexity/*` integration is separate from browser-backed
+`web-perplexity/*`. Its saved session can be created with:
+
+```powershell
+uv run perplexity-login
+```
+
+It also supports `PERPLEXITY_COOKIES` when a saved session is not used.
 
 ## Production Deployment
 
-On an Ubuntu/Debian VM, clone this repository including its submodule and run:
+On an Ubuntu/Debian VM, clone with both vendor submodules and deploy:
 
 ```bash
 git clone --recurse-submodules <repository-url> ai-provider-gateway
@@ -63,38 +87,132 @@ cd ai-provider-gateway
 sudo ./deployment/deploy.sh
 ```
 
-Run the script from the cloned repository as shown above. It also works from any
-directory because it resolves the repository root from the script path. The first
-run creates the ignored `deployment/production.env` file and stops so no insecure
-service can start. Set a strong `AI_PROVIDER_GATEWAY_API_KEY` in that file, then
-rerun `sudo ./deployment/deploy.sh`. Later invocations update submodules,
-dependencies, the systemd unit, and restart the service while preserving the
-environment file and `/var/lib/ai-provider-gateway` state.
+The first run creates `deployment/production.env` and stops. Set a strong
+`AI_PROVIDER_GATEWAY_API_KEY`, configure the enabled model allowlists, then run
+the deploy command again. The systemd service loads that file through
+`EnvironmentFile`; `.env` is not needed on production.
 
-Use `RUN_AS_USER`, `APP_DIR`, `ENV_FILE`, `PORT`, or `WORKERS` to override the
-deployment defaults. Verify the running release with:
+Verify the deployment:
 
 ```bash
 curl http://127.0.0.1:8002/health
 systemctl status ai-provider-gateway
 ```
 
-For a saved Perplexity browser session, run `uv run perplexity-login` as the
-configured service user after deployment; it is stored under the configured
-`AI_PROVIDER_GATEWAY_STATE_DIR`. Alternatively configure `PERPLEXITY_COOKIES` in
-the production environment file.
+Production stdout and stderr are written to:
 
-## Upstream Updates
+```text
+/var/lib/ai-provider-gateway/ai-provider-gateway.log
+```
+
+The deployment script generates a logrotate policy that rotates daily, retains
+30 days, and compresses older logs. Follow the active log with:
+
+```bash
+tail -f /var/lib/ai-provider-gateway/ai-provider-gateway.log
+```
+
+### Provider Login On A VM
+
+Stop the service before provider login:
+
+```bash
+sudo systemctl stop ai-provider-gateway
+```
+
+Run account commands as the same service user configured by `RUN_AS_USER` so the
+saved session is owned by that account and is written into the production state
+directory. The login command needs a headed browser, so run it from a graphical
+desktop session or a supported remote-display session such as SSH X11 forwarding.
+
+```bash
+sudo -u <service-user> -H env \
+  AI_PROVIDER_GATEWAY_STATE_DIR=/var/lib/ai-provider-gateway \
+  uv --directory /path/to/ai-provider-gateway run ai-provider-accounts add \
+  --provider google_flow --email you@gmail.com
+
+sudo -u <service-user> -H env \
+  AI_PROVIDER_GATEWAY_STATE_DIR=/var/lib/ai-provider-gateway \
+  DISPLAY="$DISPLAY" \
+  uv --directory /path/to/ai-provider-gateway run ai-provider-accounts login \
+  --provider google_flow --email you@gmail.com
+```
+
+After login completes, restart the service:
+
+```bash
+sudo systemctl start ai-provider-gateway
+```
+
+Do not run the maintenance CLI and gateway service concurrently against the same
+state directory.
+
+## Chat Completion
+
+Send an OpenAI-compatible request:
 
 ```powershell
-git submodule update --remote vendor/perplexity-ai
-uv sync
+$headers = @{ Authorization = "Bearer $env:AI_PROVIDER_GATEWAY_API_KEY" }
+Invoke-RestMethod `
+  http://127.0.0.1:8002/v1/chat/completions `
+  -Method Post `
+  -ContentType application/json `
+  -Headers $headers `
+  -Body '{"model":"perplexity/sonar-2","messages":[{"role":"user","content":"Hello"}]}'
+```
+
+Use `x-conversation-id` to preserve provider conversation state between requests.
+Browser-backed Perplexity supports text-only chat and returns a completed answer;
+when `stream: true` is requested, the gateway sends one buffered SSE content
+delta followed by the OpenAI `[DONE]` marker.
+
+Use the smoke script for local testing:
+
+```powershell
 uv run scripts/test_chat_completion.py
 ```
 
-Compatibility changes belong in `src/ai_provider_gateway/integrations/perplexity`,
-not in the submodule.
+## Image Generation
 
-Perplexity wire-model customizations belong in
-`integrations/perplexity/model_overrides.py`. They are applied in memory when
-the adapter creates its upstream client, leaving the submodule unmodified.
+Enable a Google Flow model in `.env` or `deployment/production.env`:
+
+```dotenv
+IMAGE_DEFAULT_MODEL=web-google-flow/nano-banana-2
+IMAGE_AVAILABLE_MODELS=web-google-flow/nano-banana-2
+```
+
+The supported request fields are `model`, `prompt`, `n`, `size`, and
+`response_format`. `n` must be from 1 through 4. Supported sizes are:
+
+```text
+1024x1024  768x1024  1024x768  768x1376  1376x768
+```
+
+`response_format` accepts `b64_json` or `url`. URL responses require
+`AI_PROVIDER_GATEWAY_PUBLIC_BASE_URL` and point to authenticated gateway artifact
+routes, not provider download URLs.
+
+Test image generation and save `b64_json` responses locally:
+
+```powershell
+uv run scripts/test_image_generation.py
+```
+
+Override the script's model, prompt, size, count, output directory, or response
+format with `AI_PROVIDER_GATEWAY_IMAGE_MODEL`, `AI_PROVIDER_GATEWAY_PROMPT`,
+`AI_PROVIDER_GATEWAY_IMAGE_SIZE`, `AI_PROVIDER_GATEWAY_IMAGE_COUNT`,
+`AI_PROVIDER_GATEWAY_IMAGE_OUTPUT_DIR`, and
+`AI_PROVIDER_GATEWAY_IMAGE_RESPONSE_FORMAT`.
+
+## Integrations
+
+| Public provider | Models | Implementation | Authentication and state |
+| --- | --- | --- | --- |
+| `perplexity` | `perplexity/*` | Vendored `perplexity-ai` client | `perplexity-login` or `PERPLEXITY_COOKIES`; state in the gateway state directory. |
+| `web-perplexity` | `web-perplexity/*` | Vendored `ai-web-provider` Perplexity browser automation | `ai-provider-accounts`; provider accounts and browser storage state below `web-automation/`. |
+| `web-google-flow` | `web-google-flow/*` | Vendored `ai-web-provider` Google Flow browser automation | `ai-provider-accounts`; generated artifacts below `web-automation/outputs/`. |
+
+The gateway owns HTTP authentication, OpenAI-compatible validation and response
+conversion, model allowlists, conversation persistence, artifact URLs, and
+artifact delivery. `vendor/ai-web-provider` owns provider accounts, account
+rotation, browser lifecycle, browser sessions, and provider-specific automation.
