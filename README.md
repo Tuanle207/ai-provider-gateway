@@ -25,6 +25,12 @@ Copy-Item .env.example .env
 uv sync --extra driver
 ```
 
+To sync the vendor dependencies at any time, run:
+
+```powershell
+git submodule update --remote --merge --recursive
+```
+
 The gateway loads `.env` automatically for local development. Start it with:
 
 ```powershell
