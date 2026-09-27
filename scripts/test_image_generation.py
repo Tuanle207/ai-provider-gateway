@@ -8,7 +8,8 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 
-base_url = os.environ.get("AI_PROVIDER_GATEWAY_URL", "http://127.0.0.1:8002")
+# base_url = os.environ.get("AI_PROVIDER_GATEWAY_URL", "http://127.0.0.1:8002")
+base_url = os.environ.get("AI_PROVIDER_GATEWAY_URL", "https://vcreator.wordphere.com/api/ai")
 model = os.environ.get("AI_PROVIDER_GATEWAY_IMAGE_MODEL", "web-google-flow/nano-banana-2")
 prompt = os.environ.get("AI_PROVIDER_GATEWAY_PROMPT", "A cinematic landscape at dawn")
 size = os.environ.get("AI_PROVIDER_GATEWAY_IMAGE_SIZE", "1024x1024")
@@ -35,7 +36,11 @@ payload = json.dumps(
 request = Request(
     f"{base_url.rstrip('/')}/v1/images/generations",
     data=payload,
-    headers={"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"},
+    headers={
+        "Content-Type": "application/json", 
+        "Authorization": f"Bearer {api_key}",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+    },
     method="POST",
 )
 
