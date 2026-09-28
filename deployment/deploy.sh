@@ -54,6 +54,12 @@ if grep -qE '^AI_PROVIDER_GATEWAY_API_KEY=($|replace-with-)' "$ENV_FILE"; then
     exit 1
 fi
 
+PROJECTS_FILE="$(awk -F= '$1 == "WEB_GOOGLE_FLOW_PROJECTS_FILE" { print substr($0, index($0, "=") + 1); exit }' "$ENV_FILE")"
+if [[ -n "$PROJECTS_FILE" ]] && [[ ! -r "$PROJECTS_FILE" ]]; then
+    echo "WEB_GOOGLE_FLOW_PROJECTS_FILE is not readable: $PROJECTS_FILE" >&2
+    exit 1
+fi
+
 STATE_DIR="$(awk -F= '$1 == "AI_PROVIDER_GATEWAY_STATE_DIR" { print substr($0, index($0, "=") + 1); exit }' "$ENV_FILE")"
 STATE_DIR="${STATE_DIR:-/var/lib/ai-provider-gateway}"
 LOG_FILE="${LOG_FILE:-$STATE_DIR/ai-provider-gateway.log}"

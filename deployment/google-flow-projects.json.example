@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "accounts": {
+    "you@example.com": {
+      "projects": [
+        "first-flow-project-id",
+        "second-flow-project-id"
+      ]
+    }
+  }
+}

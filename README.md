@@ -185,7 +185,14 @@ Enable a Google Flow model in `.env` or `deployment/production.env`:
 ```dotenv
 IMAGE_DEFAULT_MODEL=web-google-flow/nano-banana-2
 IMAGE_AVAILABLE_MODELS=web-google-flow/nano-banana-2
+WEB_GOOGLE_FLOW_PROJECTS_FILE=/etc/ai-provider-gateway/google-flow-projects.json
 ```
+
+Each Google Flow account needs a pool of reusable project IDs. Store the mapping
+in a deployment-owned JSON file (see
+`deployment/google-flow-projects.json.example`). The number of projects for an
+account must be at least `WEB_GOOGLE_FLOW_PER_ACCOUNT_CONCURRENCY`; one active
+job leases one project, so concurrent jobs never share a Flow project.
 
 The supported request fields are `model`, `prompt`, `n`, `size`, and
 `response_format`. `n` must be from 1 through 4. Supported sizes are:
