@@ -16,7 +16,7 @@ class Settings:
     state_dir: Path
     public_base_url: str | None
     web_automation_headless: bool
-    web_automation_max_concurrent_browsers: int
+    web_automation_max_concurrent_jobs: int
     web_automation_per_account_concurrency: int
     web_automation_default_timeout_seconds: float
     web_automation_max_retries: int
@@ -81,7 +81,7 @@ def settings(known_models: tuple[str, ...]) -> Settings:
         state_dir=Path(os.environ.get("AI_PROVIDER_GATEWAY_STATE_DIR", Path.home() / ".local" / "state" / "ai-provider-gateway")),
         public_base_url=public_base_url.rstrip("/") if public_base_url else None,
         web_automation_headless=os.environ.get("WEB_AUTOMATION_HEADLESS", "true").lower() not in {"0", "false", "no"},
-        web_automation_max_concurrent_browsers=int(os.environ.get("WEB_AUTOMATION_MAX_CONCURRENT_BROWSERS", "4")),
+        web_automation_max_concurrent_jobs=int(os.environ.get("WEB_AUTOMATION_MAX_CONCURRENT_JOBS", "4")),
         web_automation_per_account_concurrency=int(os.environ.get("WEB_AUTOMATION_PER_ACCOUNT_CONCURRENCY", "1")),
         web_automation_default_timeout_seconds=float(os.environ.get("WEB_AUTOMATION_DEFAULT_TIMEOUT_SECONDS", "180")),
         web_automation_max_retries=int(os.environ.get("WEB_AUTOMATION_MAX_RETRIES", "3")),

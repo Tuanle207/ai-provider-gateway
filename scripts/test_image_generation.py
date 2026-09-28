@@ -11,8 +11,8 @@ from urllib.request import Request, urlopen
 # base_url = os.environ.get("AI_PROVIDER_GATEWAY_URL", "http://127.0.0.1:8002")
 base_url = os.environ.get("AI_PROVIDER_GATEWAY_URL", "https://vcreator.wordphere.com/api/ai")
 model = os.environ.get("AI_PROVIDER_GATEWAY_IMAGE_MODEL", "web-google-flow/nano-banana-2")
-prompt = os.environ.get("AI_PROVIDER_GATEWAY_PROMPT", "A cinematic landscape at dawn")
-size = os.environ.get("AI_PROVIDER_GATEWAY_IMAGE_SIZE", "1024x1024")
+prompt = "A boy playing in the park with a cat"
+size = os.environ.get("AI_PROVIDER_GATEWAY_IMAGE_SIZE", "1376x768")
 count = int(os.environ.get("AI_PROVIDER_GATEWAY_IMAGE_COUNT", "1"))
 response_format = os.environ.get("AI_PROVIDER_GATEWAY_IMAGE_RESPONSE_FORMAT", "b64_json")
 api_key = os.environ.get("AI_PROVIDER_GATEWAY_API_KEY", "test-token")

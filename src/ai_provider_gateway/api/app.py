@@ -44,7 +44,7 @@ async def lifespan(_: FastAPI):
     _web_runtime = WebProviderRuntime(
         _settings.state_dir,
         headless=_settings.web_automation_headless,
-        max_concurrent_browsers=_settings.web_automation_max_concurrent_browsers,
+        max_concurrent_jobs=_settings.web_automation_max_concurrent_jobs,
         per_account_concurrency=_settings.web_automation_per_account_concurrency,
         default_timeout_seconds=_settings.web_automation_default_timeout_seconds,
         max_retries=_settings.web_automation_max_retries,
