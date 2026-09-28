@@ -15,6 +15,8 @@ set -a
 source "$ENV_FILE"
 set +a
 
+AI_PROXY_HEADLESS=false
+
 UV_BIN="$(command -v uv || true)"
 UV_BIN="${UV_BIN:-$HOME/.local/bin/uv}"
 
