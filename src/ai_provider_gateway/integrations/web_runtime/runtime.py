@@ -6,12 +6,12 @@ from ai_web_provider.core.provider.session import ProviderSession
 
 
 class WebProviderRuntime:
-    def __init__(self, state_dir: Path, *, headless: bool, max_concurrent_jobs: int, per_account_concurrency: int, default_timeout_seconds: float, max_retries: int, cooldown_minutes: float, provider_settings: dict[str, dict]) -> None:
+    def __init__(self, state_dir: Path, *, headless: bool, max_concurrent_jobs: int, per_account_max_concurrent_jobs: int, default_timeout_seconds: float, max_retries: int, cooldown_minutes: float, provider_settings: dict[str, dict]) -> None:
         settings = Settings(
             data_dir=str(state_dir / "web-automation"),
             headless=headless,
             max_concurrent_jobs=max_concurrent_jobs,
-            per_account_concurrency=per_account_concurrency,
+            per_account_concurrency=per_account_max_concurrent_jobs,
             max_retries=max_retries,
             cooldown_minutes=cooldown_minutes,
             providers=provider_settings,

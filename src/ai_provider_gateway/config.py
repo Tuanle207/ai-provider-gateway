@@ -19,7 +19,7 @@ class Settings:
     public_base_url: str | None
     web_automation_headless: bool
     web_automation_max_concurrent_jobs: int
-    web_automation_per_account_concurrency: int
+    web_automation_per_account_max_concurrent_jobs: int
     web_automation_default_timeout_seconds: float
     web_automation_max_retries: int
     web_automation_cooldown_minutes: float
@@ -70,6 +70,11 @@ def settings(known_models: tuple[str, ...]) -> Settings:
         raise RuntimeError("IMAGE_DEFAULT_MODEL must be included in IMAGE_AVAILABLE_MODELS.")
     if public_base_url and not public_base_url.startswith(("http://", "https://")):
         raise RuntimeError("AI_PROVIDER_GATEWAY_PUBLIC_BASE_URL must be an absolute HTTP(S) URL.")
+    per_account_max_concurrent_jobs = int(
+        os.environ.get("WEB_AUTOMATION_PER_ACCOUNT_MAX_CONCURRENT_JOBS", "1")
+    )
+    if per_account_max_concurrent_jobs < 1:
+        raise RuntimeError("WEB_AUTOMATION_PER_ACCOUNT_MAX_CONCURRENT_JOB must be at least one.")
     web_provider_settings: dict[str, dict[str, Any]] = {"perplexity": {}, "google_flow": {}}
     for environment_name, value in os.environ.items():
         for provider, prefix in (("perplexity", "WEB_PERPLEXITY_"), ("google_flow", "WEB_GOOGLE_FLOW_")):
@@ -83,23 +88,6 @@ def settings(known_models: tuple[str, ...]) -> Settings:
         )
     elif image_available_models:
         raise RuntimeError("WEB_GOOGLE_FLOW_PROJECTS_FILE must be set when image models are enabled.")
-    configured_concurrency = web_provider_settings["google_flow"].get(
-        "per_account_concurrency", os.environ.get("WEB_AUTOMATION_PER_ACCOUNT_CONCURRENCY", "1")
-    )
-    if projects_file:
-        try:
-            required_projects = int(configured_concurrency)
-        except (TypeError, ValueError) as exc:
-            raise RuntimeError("WEB_GOOGLE_FLOW_PER_ACCOUNT_CONCURRENCY must be an integer.") from exc
-        if required_projects < 1:
-            raise RuntimeError("WEB_GOOGLE_FLOW_PER_ACCOUNT_CONCURRENCY must be at least one.")
-        for email, projects in web_provider_settings["google_flow"]["projects_by_account"].items():
-            if len(projects) < required_projects:
-                raise RuntimeError(
-                    f"Google Flow account {email!r} has {len(projects)} project(s), but requires "
-                    f"{required_projects} for its configured concurrency."
-                )
-
     return Settings(
         api_key=api_key,
         host=os.environ.get("OPENAI_HOST", "127.0.0.1"),
@@ -108,7 +96,7 @@ def settings(known_models: tuple[str, ...]) -> Settings:
         public_base_url=public_base_url.rstrip("/") if public_base_url else None,
         web_automation_headless=os.environ.get("WEB_AUTOMATION_HEADLESS", "true").lower() not in {"0", "false", "no"},
         web_automation_max_concurrent_jobs=int(os.environ.get("WEB_AUTOMATION_MAX_CONCURRENT_JOBS", "4")),
-        web_automation_per_account_concurrency=int(os.environ.get("WEB_AUTOMATION_PER_ACCOUNT_CONCURRENCY", "1")),
+        web_automation_per_account_max_concurrent_jobs=per_account_max_concurrent_jobs,
         web_automation_default_timeout_seconds=float(os.environ.get("WEB_AUTOMATION_DEFAULT_TIMEOUT_SECONDS", "180")),
         web_automation_max_retries=int(os.environ.get("WEB_AUTOMATION_MAX_RETRIES", "3")),
         web_automation_cooldown_minutes=float(os.environ.get("WEB_AUTOMATION_COOLDOWN_MINUTES", "5")),

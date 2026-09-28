@@ -14,7 +14,7 @@ def _runtime() -> WebProviderRuntime:
         configured.state_dir,
         headless=configured.web_automation_headless,
         max_concurrent_jobs=configured.web_automation_max_concurrent_jobs,
-        per_account_concurrency=configured.web_automation_per_account_concurrency,
+        per_account_max_concurrent_jobs=configured.web_automation_per_account_max_concurrent_jobs,
         default_timeout_seconds=configured.web_automation_default_timeout_seconds,
         max_retries=configured.web_automation_max_retries,
         cooldown_minutes=configured.web_automation_cooldown_minutes,
