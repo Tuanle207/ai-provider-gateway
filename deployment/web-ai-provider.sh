@@ -15,7 +15,7 @@ set -a
 source "$ENV_FILE"
 set +a
 
-export AI_PROXY_HEADLESS=false
+export WEB_AUTOMATION_HEADLESS=false
 
 UV_BIN="$(command -v uv || true)"
 UV_BIN="${UV_BIN:-$HOME/.local/bin/uv}"
