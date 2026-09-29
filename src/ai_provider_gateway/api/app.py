@@ -9,6 +9,8 @@ from typing import Any
 
 from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
+from ai_web_provider.core.errors import AuthError, GenerationTimeoutError, NoAvailableAccountError, QuotaExceededError, TaskFailedError
+from ai_web_provider.core.logging_setup import configure_logging, get_logger
 
 from ai_provider_gateway.application.chat_completions import ChatCompletions
 from ai_provider_gateway.application.image_generations import ImageGenerations
@@ -21,8 +23,10 @@ from ai_provider_gateway.integrations.web_google_flow.adapter import WebGoogleFl
 from ai_provider_gateway.integrations.web_perplexity.adapter import WebPerplexityTextToTextAdapter
 from ai_provider_gateway.integrations.web_runtime.runtime import WebProviderRuntime
 from ai_provider_gateway.integrations.registry import known_model_ids, list_models, resolve_chat_model, resolve_image_model
+from ai_provider_gateway.observability import RequestIdMiddleware, current_request_id
 from ai_provider_gateway.version import __version__
 
+_log = get_logger()
 _settings: Settings | None = None
 _store: ConversationStore | None = None
 _service: ChatCompletions | None = None
@@ -41,6 +45,7 @@ def _configured() -> tuple[Settings, ChatCompletions, ImageGenerations, Artifact
 async def lifespan(_: FastAPI):
     global _settings, _store, _service, _image_service, _artifacts, _web_runtime
     _settings = settings(known_model_ids())
+    configure_logging(level=_settings.log_level, json=_settings.log_json)
     _web_runtime = WebProviderRuntime(
         _settings.state_dir,
         headless=_settings.web_automation_headless,
@@ -71,15 +76,50 @@ async def lifespan(_: FastAPI):
 
 
 app = FastAPI(title="AI Provider Gateway", version=__version__, lifespan=lifespan)
+app.add_middleware(RequestIdMiddleware)
 
 
 def _error(status: int, message: str, param: str | None = None, code: str | None = None) -> JSONResponse:
-    error: dict[str, Any] = {"message": message, "type": "invalid_request_error"}
+    error_type = "server_error" if status >= 500 else "rate_limit_error" if status == 429 else "invalid_request_error"
+    error: dict[str, Any] = {"message": message, "type": error_type}
     if param:
         error["param"] = param
     if code:
         error["code"] = code
+    request_id = current_request_id()
+    if request_id:
+        error["request_id"] = request_id
     return JSONResponse(status_code=status, content={"error": error})
+
+
+# (exception type, HTTP status, error code, client message); first match wins.
+_PROVIDER_FAILURES: tuple[tuple[type[BaseException], int, str, str], ...] = (
+    (NoAvailableAccountError, 503, "no_available_account", "No provider account is available."),
+    (QuotaExceededError, 429, "provider_quota_exceeded", "The provider quota is exhausted."),
+    (GenerationTimeoutError, 504, "provider_timeout", "The provider did not finish in time."),
+    (AuthError, 503, "provider_auth_required", "The provider account needs to sign in again."),
+)
+
+
+def _provider_failure(event: str, error: Exception, default_message: str) -> JSONResponse:
+    """Log a provider failure with its capture ids and map it to an HTTP error (no internals leak)."""
+    root = error.last_error if isinstance(error, TaskFailedError) else error
+    status, code, message = 502, "provider_error", default_message
+    for error_type, mapped_status, mapped_code, mapped_message in _PROVIDER_FAILURES:
+        if isinstance(root, error_type):
+            status, code, message = mapped_status, mapped_code, mapped_message
+            break
+    _log.error(
+        event,
+        http_status=status,
+        code=code,
+        error_type=type(root).__name__,
+        error_message=str(root)[:500],
+        error_code=error.error_code if isinstance(error, TaskFailedError) else None,
+        attempts=len(error.attempts) if isinstance(error, TaskFailedError) else None,
+        capture_ids=error.capture_ids if isinstance(error, TaskFailedError) else [],
+    )
+    return _error(status, message, code=code)
 
 
 def _valid_message(message: Any) -> bool:
@@ -166,6 +206,7 @@ async def chat_completions(request: Request):
     try:
         result = await service.complete(messages, model, conversation_id)
     except Exception as error:
+        _log.error("chat_completion_failed", error_type=type(error).__name__, error_message=str(error)[:500], capture_ids=error.capture_ids if isinstance(error, TaskFailedError) else [])
         return _error(502, str(error))
     return _completion(model.id, result.text)
 
@@ -213,8 +254,8 @@ async def image_generations(request: Request):
             data.append({"b64_json": base64.b64encode(artifact.path.read_bytes()).decode("ascii")} if response_format == "b64_json" else {"url": f"{configured.public_base_url}/v1/artifacts/{artifact.id}"})
     except LookupError:
         return _error(503, "The image provider is not available.", code="service_unavailable")
-    except Exception:
-        return _error(502, "Image generation failed.", code="provider_error")
+    except Exception as error:
+        return _provider_failure("image_generation_failed", error, "Image generation failed.")
     return {"created": int(time.time()), "data": data}
 
 

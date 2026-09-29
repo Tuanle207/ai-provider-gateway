@@ -29,7 +29,8 @@ class Settings:
     image_default_model: str | None
     image_available_models: tuple[str, ...]
     perplexity_cookies: str | None
-
+    log_level: str = "INFO"
+    log_json: bool = False
     @property
     def text_default_model(self) -> str:
         return self.chat_default_model
@@ -74,7 +75,7 @@ def settings(known_models: tuple[str, ...]) -> Settings:
         os.environ.get("WEB_AUTOMATION_PER_ACCOUNT_MAX_CONCURRENT_JOBS", "1")
     )
     if per_account_max_concurrent_jobs < 1:
-        raise RuntimeError("WEB_AUTOMATION_PER_ACCOUNT_MAX_CONCURRENT_JOB must be at least one.")
+        raise RuntimeError("WEB_AUTOMATION_PER_ACCOUNT_MAX_CONCURRENT_JOBS must be at least one.")
     web_provider_settings: dict[str, dict[str, Any]] = {"perplexity": {}, "google_flow": {}}
     for environment_name, value in os.environ.items():
         for provider, prefix in (("perplexity", "WEB_PERPLEXITY_"), ("google_flow", "WEB_GOOGLE_FLOW_")):
@@ -106,6 +107,8 @@ def settings(known_models: tuple[str, ...]) -> Settings:
         image_default_model=image_default_model,
         image_available_models=image_available_models,
         perplexity_cookies=os.environ.get("PERPLEXITY_COOKIES"),
+        log_level=os.environ.get("AI_PROVIDER_GATEWAY_LOG_LEVEL", "INFO"),
+        log_json=os.environ.get("AI_PROVIDER_GATEWAY_LOG_JSON", "false").lower() in {"1", "true", "yes"},
     )
 
 

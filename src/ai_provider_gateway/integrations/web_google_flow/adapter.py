@@ -2,6 +2,7 @@ from ai_web_provider import TaskKind, TaskRequest
 
 from ai_provider_gateway.domain.image_generation import GeneratedImage, ImageGenerationRequest
 from ai_provider_gateway.integrations.web_runtime.runtime import WebProviderRuntime
+from ai_provider_gateway.observability import current_request_id
 
 
 class WebGoogleFlowImageAdapter:
@@ -14,5 +15,6 @@ class WebGoogleFlowImageAdapter:
             provider="google_flow", kind=TaskKind.IMAGE, prompt=request.prompt, count=request.n,
             timeout=self._timeout,
             params={"model": request.model.provider_model, "aspect_ratio": request.aspect_ratio},
+            request_id=current_request_id(),
         ))
         return [GeneratedImage(self._runtime.output_dir / artifact.rel_path, artifact.mime) for artifact in result.artifacts if artifact.kind is TaskKind.IMAGE and artifact.rel_path]

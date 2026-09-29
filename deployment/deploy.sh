@@ -78,6 +78,9 @@ if [[ ! -x "$UV_BIN" ]]; then
 fi
 
 install -d -m 0750 -o "$RUN_AS_USER" -g "$RUN_AS_GROUP" "$STATE_DIR"
+# Failure captures (screenshots/HTML of logged-in provider pages): owner-only.
+install -d -m 0700 -o "$RUN_AS_USER" -g "$RUN_AS_GROUP" "$STATE_DIR/web-automation"
+install -d -m 0700 -o "$RUN_AS_USER" -g "$RUN_AS_GROUP" "$STATE_DIR/web-automation/failures"
 install -d -m 0750 -o "$RUN_AS_USER" -g "$RUN_AS_GROUP" "$(dirname -- "$LOG_FILE")"
 touch "$LOG_FILE"
 chown "$RUN_AS_USER:$RUN_AS_GROUP" "$LOG_FILE"

@@ -4,6 +4,7 @@ from ai_web_provider import TaskKind, TaskRequest
 
 from ai_provider_gateway.domain.text_to_text import TextToTextRequest, TextToTextResult
 from ai_provider_gateway.integrations.web_runtime.runtime import WebProviderRuntime
+from ai_provider_gateway.observability import current_request_id
 
 
 class WebPerplexityTextToTextAdapter:
@@ -21,6 +22,7 @@ class WebPerplexityTextToTextAdapter:
             provider="perplexity", kind=TaskKind.TEXT, prompt=prompt, count=1, timeout=self._timeout,
             params={"model": request.model.provider_model},
             workspace_ref=(provider_state or {}).get("workspace_ref"),
+            request_id=current_request_id(),
         ))
         text = next((artifact.text for artifact in result.artifacts if artifact.text), "")
         return TextToTextResult(text, {"workspace_ref": result.workspace_ref} if result.workspace_ref else None)

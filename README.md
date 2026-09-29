@@ -192,7 +192,7 @@ Each Google Flow account needs a pool of reusable project IDs. Store the mapping
 in a deployment-owned JSON file (see
 `deployment/google-flow-projects.json.example`). An account's effective
 concurrency is the smaller of its project count and
-`WEB_AUTOMATION_PER_ACCOUNT_MAX_CONCURRENT_JOB`; one active job leases one
+`WEB_AUTOMATION_PER_ACCOUNT_MAX_CONCURRENT_JOBS`; one active job leases one
 project, so concurrent jobs never share a Flow project.
 
 The supported request fields are `model`, `prompt`, `n`, `size`, and
@@ -217,6 +217,47 @@ format with `AI_PROVIDER_GATEWAY_IMAGE_MODEL`, `AI_PROVIDER_GATEWAY_PROMPT`,
 `AI_PROVIDER_GATEWAY_IMAGE_SIZE`, `AI_PROVIDER_GATEWAY_IMAGE_COUNT`,
 `AI_PROVIDER_GATEWAY_IMAGE_OUTPUT_DIR`, and
 `AI_PROVIDER_GATEWAY_IMAGE_RESPONSE_FORMAT`.
+
+## Troubleshooting Failures
+
+Every response carries an `X-Request-ID` header. Send your own (1–64 characters
+of `A-Z a-z 0-9 _ -`) or let the gateway generate one. Error bodies include it
+as `error.request_id`, and every log line emitted while serving the request
+carries `request_id=...`.
+
+Provider failures map to these errors:
+
+| Cause | HTTP | `error.code` |
+| --- | --- | --- |
+| No provider account available | 503 | `no_available_account` |
+| Provider quota exhausted | 429 | `provider_quota_exceeded` |
+| Generation timed out | 504 | `provider_timeout` |
+| Provider account must sign in again | 503 | `provider_auth_required` |
+| Any other provider failure | 502 | `provider_error` |
+
+When a browser-automation attempt fails, the gateway always captures the
+failing page: a screenshot, the page HTML, and `meta.json`. The metadata holds
+the step, error, traceback, recent console errors, failed network requests and
+step timings. Successful attempts write nothing. Captures are stored in:
+
+```text
+$AI_PROVIDER_GATEWAY_STATE_DIR/web-automation/failures/<YYYY-MM-DD>/<HHMMSS>_<request_id>_a<attempt>/
+```
+
+To find the capture for a failed request on the VM:
+
+```bash
+grep '<request_id>' "$AI_PROVIDER_GATEWAY_STATE_DIR/ai-provider-gateway.log" | grep attempt_failed
+scp -r vm:/var/lib/ai-provider-gateway/web-automation/failures/<date>/<capture_id> .
+```
+
+Captures show logged-in provider pages, so the directory is owner-only (0700).
+It never contains cookies, storage state, response bodies or prompt text.
+Captures older than 7 days are pruned automatically, as are the oldest ones
+once the directory exceeds 500 MB.
+
+Set `AI_PROVIDER_GATEWAY_LOG_JSON=true` for JSON log lines, and
+`AI_PROVIDER_GATEWAY_LOG_LEVEL` (default `INFO`) to change verbosity.
 
 ## Integrations
 
