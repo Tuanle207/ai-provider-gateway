@@ -13,11 +13,21 @@ WORKERS="${WORKERS:-1}"
 APP_MODULE="${APP_MODULE:-ai_provider_gateway.api.app:app}"
 UNIT_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
 LOGROTATE_FILE="/etc/logrotate.d/${SERVICE_NAME}"
+BROWSER_VERSION="ungoogled-chromium-154.0.8037.57-1-arm64_linux"
+BROWSER_ARCHIVE="ungoogled-chromium-154.0.8037.57-1-arm64_linux.tar.xz"
 
 if [[ "$(uname -s)" != "Linux" ]] || ! command -v systemctl >/dev/null; then
     echo "This deployment script requires a Linux system with systemd." >&2
     exit 1
 fi
+
+case "$(uname -m)" in
+    aarch64|arm64) ;;
+    *)
+        echo "This deployment requires an ARM64 host; found $(uname -m)." >&2
+        exit 1
+        ;;
+esac
 
 if [[ ! -f "$APP_DIR/pyproject.toml" ]] || [[ ! -f "$APP_DIR/deployment/${SERVICE_NAME}.service" ]]; then
     echo "APP_DIR must be the repository root: $APP_DIR" >&2
@@ -85,6 +95,39 @@ install -d -m 0750 -o "$RUN_AS_USER" -g "$RUN_AS_GROUP" "$(dirname -- "$LOG_FILE
 touch "$LOG_FILE"
 chown "$RUN_AS_USER:$RUN_AS_GROUP" "$LOG_FILE"
 chmod 0640 "$LOG_FILE"
+
+BROWSER_SOURCE_DIR="$APP_DIR/binaries/ungoogled-chromium"
+BROWSER_ARCHIVE_PATH="$BROWSER_SOURCE_DIR/$BROWSER_ARCHIVE"
+BROWSER_ROOT="$STATE_DIR/browser"
+BROWSER_DIR="$BROWSER_ROOT/$BROWSER_VERSION"
+BROWSER_EXECUTABLE="$BROWSER_DIR/chrome"
+if [[ ! -f "$BROWSER_ARCHIVE_PATH" ]]; then
+    echo "Bundled ungoogled-chromium archive is missing: $BROWSER_ARCHIVE_PATH" >&2
+    exit 1
+fi
+if ! (cd "$BROWSER_SOURCE_DIR" && sha256sum --check --status SHA256SUMS); then
+    echo "Bundled ungoogled-chromium archive checksum mismatch." >&2
+    exit 1
+fi
+install -d -m 0750 -o "$RUN_AS_USER" -g "$RUN_AS_GROUP" "$BROWSER_ROOT"
+if [[ ! -x "$BROWSER_EXECUTABLE" ]]; then
+    temporary_browser_dir="$(mktemp -d "$BROWSER_ROOT/.${BROWSER_VERSION}.tmp.XXXXXX")"
+    trap 'rm -rf "$temporary_browser_dir"' EXIT
+    tar -xJf "$BROWSER_ARCHIVE_PATH" -C "$temporary_browser_dir"
+    if [[ ! -x "$temporary_browser_dir/$BROWSER_VERSION/chrome" ]]; then
+        echo "Bundled ungoogled-chromium archive has an unexpected layout." >&2
+        exit 1
+    fi
+    rm -rf "$BROWSER_DIR"
+    mv "$temporary_browser_dir/$BROWSER_VERSION" "$BROWSER_DIR"
+    rmdir "$temporary_browser_dir"
+    trap - EXIT
+fi
+chown -R "$RUN_AS_USER:$RUN_AS_GROUP" "$BROWSER_DIR"
+if ! sudo -u "$RUN_AS_USER" -H "$BROWSER_EXECUTABLE" --version; then
+    echo "Installed ungoogled-chromium could not start: $BROWSER_EXECUTABLE" >&2
+    exit 1
+fi
 sudo -u "$RUN_AS_USER" -H "$UV_BIN" sync --frozen --extra driver --directory "$APP_DIR"
 
 sed \

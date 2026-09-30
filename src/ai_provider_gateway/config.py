@@ -17,7 +17,8 @@ class Settings:
     port: int
     state_dir: Path
     public_base_url: str | None
-    web_automation_headless: bool
+    web_automation_ungoogled_chromium_executable: Path
+    web_automation_browser_idle_timeout_seconds: float
     web_automation_max_concurrent_jobs: int
     web_automation_per_account_max_concurrent_jobs: int
     web_automation_default_timeout_seconds: float
@@ -76,6 +77,21 @@ def settings(known_models: tuple[str, ...]) -> Settings:
     )
     if per_account_max_concurrent_jobs < 1:
         raise RuntimeError("WEB_AUTOMATION_PER_ACCOUNT_MAX_CONCURRENT_JOBS must be at least one.")
+    browser_executable = Path(
+        os.environ.get(
+            "WEB_AUTOMATION_UNGOOGLED_CHROMIUM_EXECUTABLE",
+            "/var/lib/ai-provider-gateway/browser/ungoogled-chromium-154.0.8037.57-1-arm64_linux/chrome",
+        )
+    )
+    if not browser_executable.is_file() or not os.access(browser_executable, os.X_OK):
+        raise RuntimeError(
+            "WEB_AUTOMATION_UNGOOGLED_CHROMIUM_EXECUTABLE must point to an executable file."
+        )
+    browser_idle_timeout_seconds = float(
+        os.environ.get("WEB_AUTOMATION_BROWSER_IDLE_TIMEOUT_SECONDS", "600")
+    )
+    if browser_idle_timeout_seconds < 0:
+        raise RuntimeError("WEB_AUTOMATION_BROWSER_IDLE_TIMEOUT_SECONDS must be non-negative.")
     web_provider_settings: dict[str, dict[str, Any]] = {"perplexity": {}, "google_flow": {}}
     for environment_name, value in os.environ.items():
         for provider, prefix in (("perplexity", "WEB_PERPLEXITY_"), ("google_flow", "WEB_GOOGLE_FLOW_")):
@@ -95,7 +111,8 @@ def settings(known_models: tuple[str, ...]) -> Settings:
         port=int(os.environ.get("OPENAI_PORT", "8002")),
         state_dir=Path(os.environ.get("AI_PROVIDER_GATEWAY_STATE_DIR", Path.home() / ".local" / "state" / "ai-provider-gateway")),
         public_base_url=public_base_url.rstrip("/") if public_base_url else None,
-        web_automation_headless=os.environ.get("WEB_AUTOMATION_HEADLESS", "true").lower() not in {"0", "false", "no"},
+        web_automation_ungoogled_chromium_executable=browser_executable,
+        web_automation_browser_idle_timeout_seconds=browser_idle_timeout_seconds,
         web_automation_max_concurrent_jobs=int(os.environ.get("WEB_AUTOMATION_MAX_CONCURRENT_JOBS", "4")),
         web_automation_per_account_max_concurrent_jobs=per_account_max_concurrent_jobs,
         web_automation_default_timeout_seconds=float(os.environ.get("WEB_AUTOMATION_DEFAULT_TIMEOUT_SECONDS", "180")),

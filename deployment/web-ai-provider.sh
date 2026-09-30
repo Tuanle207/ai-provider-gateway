@@ -15,8 +15,6 @@ set -a
 source "$ENV_FILE"
 set +a
 
-export WEB_AUTOMATION_HEADLESS=false
-
 UV_BIN="$(command -v uv || true)"
 UV_BIN="${UV_BIN:-$HOME/.local/bin/uv}"
 
@@ -26,5 +24,5 @@ if [[ ! -x "$UV_BIN" ]]; then
 fi
 
 cd "$APP_DIR"
-export DISPLAY=:10
+export DISPLAY="${DISPLAY:-:10}"
 "$UV_BIN" run ai-provider-accounts "$@"

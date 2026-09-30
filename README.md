@@ -98,6 +98,13 @@ The first run creates `deployment/production.env` and stops. Set a strong
 the deploy command again. The systemd service loads that file through
 `EnvironmentFile`; `.env` is not needed on production.
 
+On ARM64, deployment extracts the committed, checksum-verified
+ungoogled-chromium archive under `/var/lib/ai-provider-gateway/browser`. Keep
+the default `WEB_AUTOMATION_UNGOOGLED_CHROMIUM_EXECUTABLE` value unless the
+browser is installed elsewhere. The browser is shared by all web-provider jobs,
+and closes after `WEB_AUTOMATION_BROWSER_IDLE_TIMEOUT_SECONDS` without active
+job contexts.
+
 Verify the deployment:
 
 ```bash
@@ -127,9 +134,10 @@ sudo systemctl stop ai-provider-gateway
 ```
 
 Run account commands as the same service user configured by `RUN_AS_USER` so the
-saved session is owned by that account and is written into the production state
-directory. The login command needs a headed browser, so run it from a graphical
-desktop session or a supported remote-display session such as SSH X11 forwarding.
+saved cookies are owned by that account and are written into the production state
+directory. The login command opens headed ungoogled-chromium, so run it from a
+graphical desktop session or a supported remote-display session such as SSH X11
+forwarding.
 
 ```bash
 sudo -u <service-user> -H env \
@@ -151,7 +159,8 @@ sudo systemctl start ai-provider-gateway
 ```
 
 Do not run the maintenance CLI and gateway service concurrently against the same
-state directory.
+state directory. Verified cookies are stored at
+`web-automation/providers/<provider>/sessions/<email>/storage_state.json`.
 
 ## Chat Completion
 

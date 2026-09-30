@@ -1,0 +1,2 @@
+binaries/ungoogled-chromium/*.zip filter=lfs diff=lfs merge=lfs -text
+binaries/ungoogled-chromium/*.tar.xz filter=lfs diff=lfs merge=lfs -text

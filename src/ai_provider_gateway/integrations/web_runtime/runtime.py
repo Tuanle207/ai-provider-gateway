@@ -1,15 +1,18 @@
 from pathlib import Path
 
-from ai_web_provider import ProviderExecutor, ProviderRuntimeContainer, Settings
+from ai_web_provider import BrowserSettings, ProviderExecutor, ProviderRuntimeContainer, Settings
 from ai_web_provider.core.models import Account, AccountStatus
 from ai_web_provider.core.provider.session import ProviderSession
 
 
 class WebProviderRuntime:
-    def __init__(self, state_dir: Path, *, headless: bool, max_concurrent_jobs: int, per_account_max_concurrent_jobs: int, default_timeout_seconds: float, max_retries: int, cooldown_minutes: float, provider_settings: dict[str, dict]) -> None:
+    def __init__(self, state_dir: Path, *, browser_executable: Path, browser_idle_timeout_seconds: float, max_concurrent_jobs: int, per_account_max_concurrent_jobs: int, default_timeout_seconds: float, max_retries: int, cooldown_minutes: float, provider_settings: dict[str, dict]) -> None:
         settings = Settings(
             data_dir=str(state_dir / "web-automation"),
-            headless=headless,
+            browser=BrowserSettings(
+                ungoogled_chromium_executable=browser_executable,
+                idle_timeout_seconds=browser_idle_timeout_seconds,
+            ),
             max_concurrent_jobs=max_concurrent_jobs,
             per_account_concurrency=per_account_max_concurrent_jobs,
             max_retries=max_retries,

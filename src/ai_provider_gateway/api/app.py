@@ -48,7 +48,8 @@ async def lifespan(_: FastAPI):
     configure_logging(level=_settings.log_level, json=_settings.log_json)
     _web_runtime = WebProviderRuntime(
         _settings.state_dir,
-        headless=_settings.web_automation_headless,
+        browser_executable=_settings.web_automation_ungoogled_chromium_executable,
+        browser_idle_timeout_seconds=_settings.web_automation_browser_idle_timeout_seconds,
         max_concurrent_jobs=_settings.web_automation_max_concurrent_jobs,
         per_account_max_concurrent_jobs=_settings.web_automation_per_account_max_concurrent_jobs,
         default_timeout_seconds=_settings.web_automation_default_timeout_seconds,

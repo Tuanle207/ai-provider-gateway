@@ -2,6 +2,14 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.2.2] - 2026-09-30
+
+### Changed
+
+- Replaced the browser automation runtime with ungoogled-chromium and cookie-only provider sessions.
+- ARM64 deployment installs the bundled, checksum-verified ungoogled-chromium archive.
+- Replaced `WEB_AUTOMATION_HEADLESS` with browser executable and idle-timeout settings.
+
 ## [0.2.1] - 2026-09-29
 
 ### Added

@@ -12,7 +12,8 @@ def _runtime() -> WebProviderRuntime:
     configured = settings(known_model_ids())
     return WebProviderRuntime(
         configured.state_dir,
-        headless=configured.web_automation_headless,
+        browser_executable=configured.web_automation_ungoogled_chromium_executable,
+        browser_idle_timeout_seconds=configured.web_automation_browser_idle_timeout_seconds,
         max_concurrent_jobs=configured.web_automation_max_concurrent_jobs,
         per_account_max_concurrent_jobs=configured.web_automation_per_account_max_concurrent_jobs,
         default_timeout_seconds=configured.web_automation_default_timeout_seconds,
